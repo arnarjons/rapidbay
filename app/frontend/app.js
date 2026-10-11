@@ -265,6 +265,10 @@
         router.navigate(path);
     }
 
+    function searchPath(term) {
+        return "/search/" + encodeURIComponent(term);
+    }
+
     var rbmixin = {
         props: ["params"],
         methods: {
@@ -845,13 +849,13 @@
                     );
                 } else {
                     saveSearchTerm(this.searchterm);
-                    navigate("/search/" + this.searchterm);
+                    navigate(searchPath(this.searchterm));
                 }
             },
             onHistoryClick: function (term) {
                 this.searchterm = term;
                 saveSearchTerm(term);
-                navigate("/search/" + term);
+                navigate(searchPath(term));
             },
             goHistory: function () {
                 navigate("/search/[history]");
@@ -883,13 +887,14 @@
                 var isTopbarButton = document.activeElement && document.activeElement.closest(".topbar-home");
                 var isHistoryItem = document.activeElement && document.activeElement.closest(".search-history");
                 var isInput = document.activeElement && document.activeElement.tagName === "INPUT";
-                if (lowername === "enter" && (isTopbarButton || isHistoryItem)) {
+                var isFrontendLink = document.activeElement && document.activeElement.classList.contains("rich-frontend-link");
+                if (lowername === "enter" && (isTopbarButton || isHistoryItem || isFrontendLink)) {
                     e.preventDefault();
                     document.activeElement.click();
                 } else if (lowername === "arrowdown") {
                     e.preventDefault();
                     if (isInput) {
-                        var firstItem = document.querySelector(".search-history-item");
+                        var firstItem = document.querySelector(".search-history-item, .rich-frontend-link");
                         if (firstItem) {
                             firstItem.focus();
                         }
@@ -908,6 +913,9 @@
                         } else {
                             focusPrevElement();
                         }
+                    } else if (isFrontendLink) {
+                        var lastItem = $(".search-history-item:last");
+                        (lastItem.length ? lastItem : $("input")).focus();
                     } else if (!isTopbarButton) {
                         $(".topbar-home button:first").focus();
                     }
@@ -1013,7 +1021,7 @@
                     });
                 };
                 var fallbackSearch = function () {
-                    get("/api/search/" + self.searchterm, function (data) {
+                    get("/api/search/" + encodeURIComponent(self.searchterm), function (data) {
                         self.results = data.results;
                         focusFirstResult();
                     });
@@ -1022,7 +1030,7 @@
                 // each indexer responds instead of waiting for the slowest.
                 var focused = false;
                 this.eventsource = subscribe(
-                    "/api/search_events/" + self.searchterm,
+                    "/api/search_events/" + encodeURIComponent(self.searchterm),
                     function (data) {
                         if (data.results) {
                             self.results = data.results;
